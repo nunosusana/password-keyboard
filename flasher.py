@@ -22,7 +22,6 @@ def list_rp2040_ports():
 
     try:
         result = subprocess.check_output([ARDUINO_CLI, "board", "list"]).decode()
-
         for line in result.splitlines():
             parts = line.split()
             if parts and "port" != parts[0].lower().strip() and "no" != parts[0].lower().strip():
@@ -79,7 +78,6 @@ def flash_board(username, password, port, log_widget):
         shutil.rmtree(temp_dir, ignore_errors=True)
         log_widget.see(tk.END)
 
-
 def on_flash_click():
     username = username_entry.get().strip()
     password = password_entry.get().strip()
@@ -95,7 +93,6 @@ def on_flash_click():
 
     flash_board(username, password, port, log_box)
 
-
 def refresh_ports():
     ports = list_rp2040_ports()
     port_menu["values"] = ports
@@ -109,9 +106,12 @@ def check_dependencies():
         core = ':'.join(FQBN.split(":")[:2])
         result = subprocess.check_output([ARDUINO_CLI, "core", "list"]).decode()
         if core not in result:
-            messagebox.showinfo("Installing Core", f"Installing {core} core...")
-            subprocess.run([ARDUINO_CLI, "core", "install", core], check=True)
-        messagebox.showinfo("✅ Core", f"{core} installed.")
+            if (messagebox.askokcancel("Installing Core", f"{core} needs to be installed. Proceed?")):
+                subprocess.run([ARDUINO_CLI, "core", "update-index"], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "core", "install", core], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                messagebox.showinfo("✅ Core", f"{core} installed.")
+            else:
+                exit(0)
     except Exception as e:
         messagebox.showerror("Dependency Error", f"Failed to verify/install {core} core: {e}")
 
@@ -161,7 +161,7 @@ log_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=12)
 log_box.pack(padx=10, pady=10, fill="both", expand=True)
 
 # Make sure rp2040 core is available
-check_dependencies(log_box)
+check_dependencies()
 
 # Load ports initially
 refresh_ports()
