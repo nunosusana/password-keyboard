@@ -11,6 +11,7 @@ import os
 # Configuration
 # -----------------------------
 FQBN = "rp2040:rp2040:rpipico"
+ThirdPartyCodeURL = "https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json"
 SKETCH_NAME = os.path.join(os.path.dirname(__file__),"main.ino") 
 ARDUINO_CLI = os.path.join(os.path.dirname(__file__), "arduino-cli.exe" if platform.system()=="Windows" else "arduino-cli")
 # -----------------------------
@@ -107,13 +108,18 @@ def check_dependencies():
         result = subprocess.check_output([ARDUINO_CLI, "core", "list"]).decode()
         if core not in result:
             if (messagebox.askokcancel("Installing Core", f"{core} needs to be installed. Proceed?")):
+                subprocess.run([ARDUINO_CLI, "config", "add", "board_manager.additional_urls", ThirdPartyCodeURL], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 subprocess.run([ARDUINO_CLI, "core", "update-index"], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 subprocess.run([ARDUINO_CLI, "core", "install", core], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 messagebox.showinfo("✅ Core", f"{core} installed.")
             else:
                 exit(0)
+    except subprocess.CalledProcessError as e:
+        messagebox.showerror("Dependency Error", f"❌ Failed to verify/install {core} core: {e}")
+        exit(1)
     except Exception as e:
-        messagebox.showerror("Dependency Error", f"Failed to verify/install {core} core: {e}")
+        messagebox.showerror("Dependency Error", f"❌ Failed to verify/install {core} core: {e}")
+        exit(1)
 
 # -----------------------------
 # GUI Setup

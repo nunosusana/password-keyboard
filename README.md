@@ -23,12 +23,12 @@ pip install pyinstaller
 
 ### Linux
 ```bash
-pyinstaller --onefile --noconsole --add-data "main.ino:." --add-binary "arduino-cli:."  flasher.py 
+pyinstaller --onefile --noconsole --add-data "main.ino:." --add-binary "arduino-cli:." --icon "password-keyboard.ico" flasher.py 
 ```
 
 ### Windows
 ```bash
-pyinstaller --onefile --noconsole --add-data "main.ino;." --add-binary "arduino-cli.exe;." flasher.py
+pyinstaller.exe --onefile --noconsole --add-data "main.ino;." --add-binary "arduino-cli.exe;." --name "password-keyboard" --icon "password-keyboard.ico" --version-file version.txt flasher.py
 ```
 
 ## Run
