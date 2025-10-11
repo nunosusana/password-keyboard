@@ -17,11 +17,12 @@ ARDUINO_CLI = os.path.join(os.path.dirname(__file__), "arduino-cli.exe" if platf
 # -----------------------------
 # Helper functions
 # -----------------------------
-def list_rp2040_ports():
+def list_rp2040_ports(log_widget):
     """Return a list of ports with RP2040 or Pico boards detected."""
     ports = []
 
     try:
+        insert_log(log_widget, "🔍 Scanning for available ports...")
         result = subprocess.check_output([ARDUINO_CLI, "board", "list"]).decode()
         for line in result.splitlines():
             parts = line.split()
@@ -37,8 +38,8 @@ def list_rp2040_ports():
 
 
 def flash_board(username, password, port, log_widget):
-    log_widget.delete("1.0", tk.END)
-    log_widget.insert(tk.END, "Starting flash process...\n")
+    # log_widget.delete("1.0", tk.END)
+    insert_log(log_widget, f"Starting flashing process on port {port}...")
 
     sketch_path = Path(SKETCH_NAME)
     if not sketch_path.exists():
@@ -56,28 +57,29 @@ def flash_board(username, password, port, log_widget):
         temp_sketch.write_text(code)
 
         # Compile
-        log_widget.insert(tk.END, "🛠 Compiling sketch...\n")
+        insert_log(log_widget, "🛠 Compiling sketch...")
         log_widget.see(tk.END)
         subprocess.run([ARDUINO_CLI, "compile", "--fqbn", FQBN, str(temp_dir)],
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
         # Upload
-        log_widget.insert(tk.END, f"🚀 Uploading to {port}...\n")
-        log_widget.see(tk.END)
+        insert_log(log_widget, f"🚀 Uploading to {port}...")
         subprocess.run([ARDUINO_CLI, "upload", "-p", port, "--fqbn", FQBN, str(temp_dir)],
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
-        log_widget.insert(tk.END, "✅ Upload complete!\n")
-        messagebox.showinfo("Success", "Flashing complete!")
-
+        insert_log(log_widget, "✅ Upload complete! You may unplug your board now.")
     except subprocess.CalledProcessError as e:
-        log_widget.insert(tk.END, f"❌ Error:\n{e.output.decode(errors='ignore')}\n")
-        messagebox.showerror("Flashing failed", "Check logs for details.")
+        insert_log(log_widget, f"❌ Error during process:\n{e.output.decode(errors='ignore')}")
+        messagebox.showerror("Flashing Error", f"An error occurred during flashing to port {port}. Check the dialog box for details.")
     except Exception as e:
-        log_widget.insert(tk.END, f"❌ Unexpected error: {e}\n")
+        insert_log(log_widget, f"❌ Unexpected error: {e}")
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
-        log_widget.see(tk.END)
+
+def insert_log(log_widget, message):
+    log_widget.insert(tk.END, message + "\n")
+    log_widget.update_idletasks()
+    log_widget.see(tk.END)
 
 def on_flash_click():
     username = username_entry.get().strip()
@@ -94,31 +96,37 @@ def on_flash_click():
 
     flash_board(username, password, port, log_box)
 
-def refresh_ports():
-    ports = list_rp2040_ports()
+def on_refresh_click():
+    refresh_ports(log_box)
+
+def refresh_ports(log_widget):
+    ports = list_rp2040_ports(log_widget)
     port_menu["values"] = ports
     if ports:
         port_var.set(ports[0])
     else:
         port_var.set("")
 
-def check_dependencies():
+def check_dependencies(log_widget):
     try:
+        insert_log(log_widget, "🔍 Checking for required cores...")
         core = ':'.join(FQBN.split(":")[:2])
         result = subprocess.check_output([ARDUINO_CLI, "core", "list"]).decode()
         if core not in result:
-            if (messagebox.askokcancel("Installing Core", f"{core} needs to be installed. Proceed?")):
+            if (messagebox.askokcancel("Core Installation", f"{core} needs to be installed. Proceed?")):
+                insert_log(log_widget, f"⬇️ Installing {core} core...")
                 subprocess.run([ARDUINO_CLI, "config", "add", "board_manager.additional_urls", ThirdPartyCodeURL], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 subprocess.run([ARDUINO_CLI, "core", "update-index"], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 subprocess.run([ARDUINO_CLI, "core", "install", core], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                messagebox.showinfo("✅ Core", f"{core} installed.")
+                insert_log(log_widget, f"✅ {core} core installed.")
+                messagebox.showinfo("Core Installation", f"{core} core installed.")
             else:
                 exit(0)
     except subprocess.CalledProcessError as e:
-        messagebox.showerror("Dependency Error", f"❌ Failed to verify/install {core} core: {e}")
+        messagebox.showerror("Dependency Error", f"Failed to verify/install {core} core: {e}")
         exit(1)
     except Exception as e:
-        messagebox.showerror("Dependency Error", f"❌ Failed to verify/install {core} core: {e}")
+        messagebox.showerror("Dependency Error", f"Failed to verify/install {core} core: {e}")
         exit(1)
 
 # -----------------------------
@@ -154,7 +162,7 @@ port_var = tk.StringVar()
 port_menu = ttk.Combobox(port_frame, textvariable=port_var, width=30, state="readonly")
 port_menu.pack(side="left", padx=5)
 
-refresh_button = tk.Button(port_frame, text="↻ Refresh", command=refresh_ports)
+refresh_button = tk.Button(port_frame, text="↻ Refresh", command=on_refresh_click)
 refresh_button.pack(side="left", padx=5)
 
 # Flash button
@@ -167,9 +175,9 @@ log_box = scrolledtext.ScrolledText(root, wrap=tk.WORD, height=12)
 log_box.pack(padx=10, pady=10, fill="both", expand=True)
 
 # Make sure rp2040 core is available
-check_dependencies()
+check_dependencies(log_box)
 
 # Load ports initially
-refresh_ports()
+refresh_ports(log_box)
 
 root.mainloop()
