@@ -19,14 +19,19 @@ FQBN = "rp2040:rp2040:rpipico"
 ThirdPartyCodeURL = "https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json"
 SKETCH_NAME = os.path.join(os.path.dirname(__file__),"main.ino")
 ARDUINO_CLI = os.path.join(os.path.dirname(__file__), "arduino-cli.exe" if platform.system()=="Windows" else "arduino-cli")
-
+CREATION_FLAGS = 0
+if platform.system() == "Windows":
+    CREATION_FLAGS = subprocess.CREATE_NO_WINDOW
+# -----------------------------
+# Helper functions
+# -----------------------------
 def list_rp2040_ports(log_widget):
     """Return a list of ports with RP2040 or Pico boards detected."""
     ports = []
 
     try:
         insert_log(log_widget, "🔍 Scanning for available ports...")
-        result = subprocess.check_output([ARDUINO_CLI, "board", "list"], creationflags = subprocess.CREATE_NO_WINDOW).decode()
+        result = subprocess.check_output([ARDUINO_CLI, "board", "list"], creationflags = CREATION_FLAGS).decode()
         for line in result.splitlines():
             parts = line.split()
             if parts and "port" != parts[0].lower().strip() and "no" != parts[0].lower().strip():
@@ -58,13 +63,13 @@ def flash_board(window, username, password, port, log_widget):
         # Compile
         insert_log(log_widget, "🛠 Compiling sketch...")
         QApplication.processEvents()
-        subprocess.run([ARDUINO_CLI, "compile", "--fqbn", FQBN, str(temp_dir)], creationflags = subprocess.CREATE_NO_WINDOW,
+        subprocess.run([ARDUINO_CLI, "compile", "--fqbn", FQBN, str(temp_dir)], creationflags = CREATION_FLAGS,
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         
         # Upload
         insert_log(log_widget, f"🚀 Uploading to {port}...")
         QApplication.processEvents()
-        subprocess.run([ARDUINO_CLI, "upload", "-p", port, "--fqbn", FQBN, str(temp_dir)], creationflags = subprocess.CREATE_NO_WINDOW,
+        subprocess.run([ARDUINO_CLI, "upload", "-p", port, "--fqbn", FQBN, str(temp_dir)], creationflags = CREATION_FLAGS,
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         insert_log(log_widget, "✅ Upload complete! You may unplug your board now.")
     except subprocess.CalledProcessError as e:
@@ -84,14 +89,14 @@ def check_dependencies(window, log_widget):
     try:
         insert_log(log_widget, "🔍 Checking for required cores...")
         core = ':'.join(FQBN.split(":")[:2])
-        result = subprocess.check_output([ARDUINO_CLI, "core", "list"], creationflags = subprocess.CREATE_NO_WINDOW).decode()
+        result = subprocess.check_output([ARDUINO_CLI, "core", "list"], creationflags = CREATION_FLAGS).decode()
         if core not in result:
             reply = QMessageBox.question(window, "Core Installation", f"{core} needs to be installed. Proceed?", QMessageBox.Yes | QMessageBox.No)
             if reply == QMessageBox.Yes:
                 insert_log(log_widget, f"⬇️ Installing {core} core...")
-                subprocess.run([ARDUINO_CLI, "config", "add", "board_manager.additional_urls", ThirdPartyCodeURL], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                subprocess.run([ARDUINO_CLI, "core", "update-index"], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                subprocess.run([ARDUINO_CLI, "core", "install", core], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "config", "add", "board_manager.additional_urls", ThirdPartyCodeURL], creationflags = CREATION_FLAGS, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "core", "update-index"], creationflags = CREATION_FLAGS, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "core", "install", core], creationflags = CREATION_FLAGS, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 insert_log(log_widget, f"✅ {core} core installed.")
                 QMessageBox.information(window, "Core Installation", f"{core} core installed.")
             else:
@@ -128,7 +133,8 @@ class MainWindow(QMainWindow):
         user_layout = QHBoxLayout()
         user_label = QLabel("Username:")
         self.username_entry = QLineEdit()
-        self.username_entry.setFixedWidth(445)
+        self.username_entry.setMaxLength(64)
+        self.username_entry.setMaxLength(500)
         user_layout.addWidget(user_label)
         user_layout.addWidget(self.username_entry)
         layout.addLayout(user_layout)
@@ -138,7 +144,8 @@ class MainWindow(QMainWindow):
         pass_label = QLabel("Password:")
         self.password_entry = QLineEdit()
         self.password_entry.setEchoMode(QLineEdit.Password)
-        self.password_entry.setFixedWidth(445)
+        self.password_entry.setMaxLength(64)
+        self.username_entry.setMaxLength(500)
         pass_layout.addWidget(pass_label)
         pass_layout.addWidget(self.password_entry)
         layout.addLayout(pass_layout)
