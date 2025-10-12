@@ -24,7 +24,7 @@ def list_rp2040_ports(log_widget):
 
     try:
         insert_log(log_widget, "🔍 Scanning for available ports...")
-        result = subprocess.check_output([ARDUINO_CLI, "board", "list"]).decode()
+        result = subprocess.check_output([ARDUINO_CLI, "board", "list"], creationflags = subprocess.CREATE_NO_WINDOW).decode()
         for line in result.splitlines():
             parts = line.split()
             if parts and "port" != parts[0].lower().strip() and "no" != parts[0].lower().strip():
@@ -58,12 +58,12 @@ def flash_board(username, password, port, log_widget):
         # Compile
         insert_log(log_widget, "🛠 Compiling sketch...")
         log_widget.see(tk.END)
-        subprocess.run([ARDUINO_CLI, "compile", "--fqbn", FQBN, str(temp_dir)],
+        subprocess.run([ARDUINO_CLI, "compile", "--fqbn", FQBN, str(temp_dir)], creationflags = subprocess.CREATE_NO_WINDOW,
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
         # Upload
         insert_log(log_widget, f"🚀 Uploading to {port}...")
-        subprocess.run([ARDUINO_CLI, "upload", "-p", port, "--fqbn", FQBN, str(temp_dir)],
+        subprocess.run([ARDUINO_CLI, "upload", "-p", port, "--fqbn", FQBN, str(temp_dir)], creationflags = subprocess.CREATE_NO_WINDOW,
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         insert_log(log_widget, "✅ Upload complete! You may unplug your board now.")
     except subprocess.CalledProcessError as e:
@@ -109,13 +109,13 @@ def check_dependencies(log_widget):
     try:
         insert_log(log_widget, "🔍 Checking for required cores...")
         core = ':'.join(FQBN.split(":")[:2])
-        result = subprocess.check_output([ARDUINO_CLI, "core", "list"]).decode()
+        result = subprocess.check_output([ARDUINO_CLI, "core", "list"],  creationflags = subprocess.CREATE_NO_WINDOW).decode()
         if core not in result:
             if (messagebox.askokcancel("Core Installation", f"{core} needs to be installed. Proceed?")):
                 insert_log(log_widget, f"⬇️ Installing {core} core...")
-                subprocess.run([ARDUINO_CLI, "config", "add", "board_manager.additional_urls", ThirdPartyCodeURL], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                subprocess.run([ARDUINO_CLI, "core", "update-index"], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                subprocess.run([ARDUINO_CLI, "core", "install", core], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "config", "add", "board_manager.additional_urls", ThirdPartyCodeURL], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "core", "update-index"], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "core", "install", core], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 insert_log(log_widget, f"✅ {core} core installed.")
                 messagebox.showinfo("Core Installation", f"{core} core installed.")
             else:

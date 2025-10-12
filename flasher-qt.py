@@ -26,7 +26,7 @@ def list_rp2040_ports(log_widget):
 
     try:
         insert_log(log_widget, "🔍 Scanning for available ports...")
-        result = subprocess.check_output([ARDUINO_CLI, "board", "list"]).decode()
+        result = subprocess.check_output([ARDUINO_CLI, "board", "list"], creationflags = subprocess.CREATE_NO_WINDOW).decode()
         for line in result.splitlines():
             parts = line.split()
             if parts and "port" != parts[0].lower().strip() and "no" != parts[0].lower().strip():
@@ -38,12 +38,12 @@ def list_rp2040_ports(log_widget):
         ports = ["No boards found"]
     return ports
 
-def flash_board(username, password, port, log_widget):
+def flash_board(window, username, password, port, log_widget):
     insert_log(log_widget, f"Starting flashing process on port {port}...")
 
     sketch_path = Path(SKETCH_NAME)
     if not sketch_path.exists():
-        QMessageBox.critical(None, "Error", f"Sketch not found: {SKETCH_NAME}")
+        QMessageBox.critical(window, "Error", f"Sketch not found: {SKETCH_NAME}")
         return
     
     temp_dir = Path(tempfile.mkdtemp(prefix="rp2040_build_"))
@@ -58,18 +58,18 @@ def flash_board(username, password, port, log_widget):
         # Compile
         insert_log(log_widget, "🛠 Compiling sketch...")
         QApplication.processEvents()
-        subprocess.run([ARDUINO_CLI, "compile", "--fqbn", FQBN, str(temp_dir)],
+        subprocess.run([ARDUINO_CLI, "compile", "--fqbn", FQBN, str(temp_dir)], creationflags = subprocess.CREATE_NO_WINDOW,
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         
         # Upload
         insert_log(log_widget, f"🚀 Uploading to {port}...")
         QApplication.processEvents()
-        subprocess.run([ARDUINO_CLI, "upload", "-p", port, "--fqbn", FQBN, str(temp_dir)],
+        subprocess.run([ARDUINO_CLI, "upload", "-p", port, "--fqbn", FQBN, str(temp_dir)], creationflags = subprocess.CREATE_NO_WINDOW,
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         insert_log(log_widget, "✅ Upload complete! You may unplug your board now.")
     except subprocess.CalledProcessError as e:
         insert_log(log_widget, f"❌ Error during process:\n{e.output.decode(errors='ignore')}")
-        QMessageBox.critical(None, "Flashing Error", f"An error occurred during flashing to port {port}. Check the log for details.")
+        QMessageBox.critical(window, "Flashing Error", f"An error occurred during flashing to port {port}. Check the log for details.")
     except Exception as e:
         insert_log(log_widget, f"❌ Unexpected error: {e}")
     finally:
@@ -80,27 +80,27 @@ def insert_log(log_widget, message):
     log_widget.moveCursor(log_widget.textCursor().End)
     QApplication.processEvents()
 
-def check_dependencies(log_widget):
+def check_dependencies(window, log_widget):
     try:
         insert_log(log_widget, "🔍 Checking for required cores...")
         core = ':'.join(FQBN.split(":")[:2])
-        result = subprocess.check_output([ARDUINO_CLI, "core", "list"]).decode()
+        result = subprocess.check_output([ARDUINO_CLI, "core", "list"], creationflags = subprocess.CREATE_NO_WINDOW).decode()
         if core not in result:
-            reply = QMessageBox.question(None, "Core Installation", f"{core} needs to be installed. Proceed?", QMessageBox.Yes | QMessageBox.No)
+            reply = QMessageBox.question(window, "Core Installation", f"{core} needs to be installed. Proceed?", QMessageBox.Yes | QMessageBox.No)
             if reply == QMessageBox.Yes:
                 insert_log(log_widget, f"⬇️ Installing {core} core...")
-                subprocess.run([ARDUINO_CLI, "config", "add", "board_manager.additional_urls", ThirdPartyCodeURL], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                subprocess.run([ARDUINO_CLI, "core", "update-index"], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                subprocess.run([ARDUINO_CLI, "core", "install", core], check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "config", "add", "board_manager.additional_urls", ThirdPartyCodeURL], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "core", "update-index"], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                subprocess.run([ARDUINO_CLI, "core", "install", core], creationflags = subprocess.CREATE_NO_WINDOW, check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 insert_log(log_widget, f"✅ {core} core installed.")
-                QMessageBox.information(None, "Core Installation", f"{core} core installed.")
+                QMessageBox.information(window, "Core Installation", f"{core} core installed.")
             else:
                 sys.exit(0)
     except subprocess.CalledProcessError as e:
-        QMessageBox.critical(None, "Dependency Error", f"Failed to verify/install {core} core: {e}")
+        QMessageBox.critical(window, "Dependency Error", f"Failed to verify/install {core} core: {e}")
         sys.exit(1)
     except Exception as e:
-        QMessageBox.critical(None, "Dependency Error", f"Failed to verify/install {core} core: {e}")
+        QMessageBox.critical(window, "Dependency Error", f"Failed to verify/install {core} core: {e}")
         sys.exit(1)
 
 class MainWindow(QMainWindow):
@@ -180,7 +180,7 @@ class MainWindow(QMainWindow):
         if not port:
             QMessageBox.warning(self, "Port required", "Please select a COM port.")
             return
-        flash_board(username, password, port, self.log_box)
+        flash_board(self, username, password, port, self.log_box)
 
     def on_refresh_click(self):
         self.refresh_ports()
@@ -197,7 +197,7 @@ def main():
     window = MainWindow()
     window.show()
     # Dependency check and initial port load
-    check_dependencies(window.log_box)
+    check_dependencies(window, window.log_box)
     window.refresh_ports()
     sys.exit(app.exec_())
 
