@@ -6,33 +6,41 @@
 
 Turns a RP Pico or another board that uses the RP2040 mirocontroller into a simple macro keyboard that will send key strokes to fill a username and password prompt. This action will occur on every boot.
 
-## Requirements
+## Contribute
+
+### Requirements
 - Python 3
-- Python Tkinter
+- Python Tkinter - for Tkinter version
+- PyQt - for Qt version
+```bash
+pip install PyQt5
+```
 
 It is not needed to have installed arduino-cli since this project is bundled with the necessary libraries.
 
-## Possible issues
-This project should run on both Linux and Windows, but is was only tested on Linux environments.
-
-## Build
+### Building the executable
 
 ```bash
 pip install pyinstaller
 ```
 
-### Linux
+#### Linux
+- Tkinter version
 ```bash
-pyinstaller --onefile --noconsole --add-data "main.ino:." --add-binary "arduino-cli:." --icon "password-keyboard.ico" --name "password-keyboard" flasher.py 
+pyinstaller --onefile --noconsole --add-data "main.ino:." --add-data "password-keyboard.png:." --add-binary "arduino-cli:." --name "password-keyboard" flasher.py 
+```
+- Qt version
+```bash
+pyinstaller --onefile --noconsole --add-data "main.ino:." --add-data "password-keyboard.png:." --add-binary "arduino-cli:." --name "password-keyboard" flasher-qt.py 
 ```
 
-### Windows
+#### Windows
+- Tkinter version
 ```bash
-pyinstaller.exe --onefile --noconsole --add-data "main.ino;." --add-binary "arduino-cli.exe;." --name "password-keyboard" --icon "password-keyboard.ico" --version-file version.txt flasher.py
+pyinstaller.exe --onefile --noconsole --add-data "main.ino;." --add-data "password-keyboard.ico;." --add-binary "arduino-cli.exe;." --name "password-keyboard" --icon "password-keyboard.ico" --version-file version.txt flasher.py
 ```
-
-## Run
+- Qt version
 ```bash
-python3 flasher.py
+pyinstaller.exe --onefile --noconsole --add-data "main.ino;." --add-data "password-keyboard.ico;." --add-binary "arduino-cli.exe;." --name "password-keyboard" --icon "password-keyboard.ico" --version-file version.txt flasher-qt.py
 ```
 

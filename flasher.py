@@ -1,3 +1,4 @@
+import sys
 import subprocess
 import tempfile
 import shutil
@@ -31,14 +32,12 @@ def list_rp2040_ports(log_widget):
     except Exception:
         pass
 
-    # Fallback: common default ports
     if not ports:
         ports = ["No boards found"]
     return ports
 
 
 def flash_board(username, password, port, log_widget):
-    # log_widget.delete("1.0", tk.END)
     insert_log(log_widget, f"Starting flashing process on port {port}...")
 
     sketch_path = Path(SKETCH_NAME)
@@ -66,7 +65,6 @@ def flash_board(username, password, port, log_widget):
         insert_log(log_widget, f"🚀 Uploading to {port}...")
         subprocess.run([ARDUINO_CLI, "upload", "-p", port, "--fqbn", FQBN, str(temp_dir)],
                        check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
         insert_log(log_widget, "✅ Upload complete! You may unplug your board now.")
     except subprocess.CalledProcessError as e:
         insert_log(log_widget, f"❌ Error during process:\n{e.output.decode(errors='ignore')}")
@@ -121,18 +119,30 @@ def check_dependencies(log_widget):
                 insert_log(log_widget, f"✅ {core} core installed.")
                 messagebox.showinfo("Core Installation", f"{core} core installed.")
             else:
-                exit(0)
+                sys.exit(0)
     except subprocess.CalledProcessError as e:
         messagebox.showerror("Dependency Error", f"Failed to verify/install {core} core: {e}")
-        exit(1)
+        sys.exit(1)
     except Exception as e:
         messagebox.showerror("Dependency Error", f"Failed to verify/install {core} core: {e}")
-        exit(1)
+        sys.exit(1)
 
 # -----------------------------
 # GUI Setup
 # -----------------------------
 root = tk.Tk()
+
+# Set window icon
+if platform.system()=="Windows":
+    icon_path = os.path.join(os.path.dirname(__file__), "password-keyboard.ico")
+    if os.path.exists(icon_path):
+        root.iconbitmap(icon_path)
+else:
+    icon_path = os.path.join(os.path.dirname(__file__), "password-keyboard.png")
+    if os.path.exists(icon_path):
+        icon_img = tk.PhotoImage(file=icon_path)
+        root.iconphoto(True, icon_img)
+
 root.title("Password Keyboard Flasher")
 root.geometry("520x440")
 root.resizable(False, False)
